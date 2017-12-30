@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>pergra: Personal Graphs</title>
+        <style type="text/css">
+            body {
+                margin: 0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            }
+            header {
+                background: #5CB5F9;
+            }
+            header a {
+                padding: 10px;
+                font-size: 1.1em;
+                text-decoration: none;
+                display: inline-block;
+                color: white;
+            }
+            .category {
+                border: 1px solid rgb(231, 76, 60);
+                background: rgb(231, 76, 60); /* TODO: would be cool if colors were based on the name, different by category; of course allowing assignment */
+                margin: 15px;
+            }
+            .category > h1 {
+                margin: 0;
+                padding: 12px;
+                color: white;
+                font-size: 1em;
+                cursor: pointer;
+            }
+            .category.shown > h1 {
+                padding-bottom: 0;
+            }
+            .graph-preview-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-gap: 10px;
+                grid-auto-rows: minmax(100px, auto);
+                padding: 10px;
+            }
+            .graph-preview {
+                border: 2px solid rgb(41, 128, 185);
+                background: white;
+                height: 100%;
+                text-decoration: inherit;
+                color: inherit;
+                display: block;
+                box-sizing: border-box;
+            }
+            .graph-preview > h1 {
+                background: rgb(41, 128, 185); /* TODO: same with the colors here: have them depend on name? */
+                margin: 0;
+                padding: 0.4em;
+                color: white;
+                font-size: 1em;
+                font-weight: normal;
+            }
+            .graph-preview .y-label, .graph-preview .x-label {
+                font-size: 0.8em;
+                color: rgba(0,0,0,0.5);
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+            .graph-preview .labelled-point {
+                font-size: 0.7em;
+                width: 30px;
+                text-align: center;
+            }
+            .graph-preview .y-label {
+                display: inline-block;
+                vertical-align: middle;
+                width: 1em;
+                transform: rotate(-90deg);
+                margin-left: 10px;
+            }
+            .graph-preview .y-labelled-points {
+                display: inline-block;
+                vertical-align: middle;
+                height: 150px;
+                margin-top: calc(12px + 5px);
+                width: 30px;
+                position: relative;
+            }
+            .graph-preview .y-labelled-points .labelled-point {
+                text-align: right;
+            }
+            .graph-preview .labelled-point-min-y {
+                position: absolute;
+                bottom: calc(0px - 0.5em);
+            }
+            .graph-preview .labelled-point-max-y {
+                position: absolute;
+                top: calc(0px - 0.5em);
+            }
+            .graph-preview .x-label {
+                text-align: center;
+                width: 350px;
+                margin-left: calc(30px + 18px + 15px);
+                margin-bottom: 10px;
+            }
+            .graph-preview .x-labelled-points {
+                margin-left: calc(30px + 18px + 15px);
+                width: 350px;
+                position: relative;
+                height: 1em;
+            }
+            .graph-preview .labelled-point-min-x {
+                position: absolute;
+                left: -15px;
+            }
+            .graph-preview .labelled-point-max-x {
+                position: absolute;
+                right: -15px;
+            }
+            .graph-preview-graph {
+                margin-top: 12px;
+                border-left: 2px dashed #5CB5F9;
+                border-bottom: 2px dashed #5CB5F9;
+                height: 155px;
+                width: 350px;
+                vertical-align: middle;
+            }
+            .graph-preview-graph path {
+                transform: translateY(5px);
+                stroke: black;
+                fill: none;
+            }
+            .graph-preview-add-new {
+                border: 4px dashed white;
+                background: transparent;
+                color: white;
+                font-size: 1.4em;
+                font-weight: bold;
+                position: relative;
+            }
+            .graph-preview-add-new > div {
+                position: absolute;
+                text-align: center;
+                top: calc(50% - (1em / 2));
+                width: 100%;
+            }
+            .graph-preview-adding h1 input {
+                background: transparent;
+                border: none;
+                color: inherit;
+                font-family: inherit;
+                font-weight: inherit;
+                font-size: inherit;
+                border-bottom: 1px dashed white;
+                width: 100%;
+            }
+            .graph-preview-adding p {
+                margin: 10px;
+            }
+            .graph-preview-adding label {
+                display: block;
+            }
+        </style>
+        <script>
+            let testData = {
+               categories: [
+                    {
+                        name: "fitness",
+                        graphs: [
+                            {
+                                name: "deadlift",
+                                x: "date",
+                                y: "kg",
+                                data: [
+                                    { x: "2017-09-01", y: 70 },
+                                    { x: "2017-11-31", y: 135 }
+                                ]
+                            },
+                            {
+                                name: "back squat",
+                                x: "date",
+                                y: "kg",
+                                data: [
+                                    { x: "2017-09-01", y: 60 },
+                                    { x: "2017-11-31", y: 125 }
+                                ]
+                            }
+                        ]
+                   },
+                   {
+                        name: "house",
+                        graphs: [
+                            {
+                                name: "electricity use",
+                                x: "date",
+                                y: "kWh",
+                                data: [
+                                    { x: "2017-10-30", y: 2120 },
+                                    { x: "2017-11-30", y: 3221 },
+                                    { x: "2017-12-30", y: 3421 }
+                                ]
+                            }
+                        ]
+                   }
+                ]
+            };
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    </head>
+    <body>
+        <header>
+            <a href="/">pergra</a>
+        </header>
+        <main>
+            <section v-bind:class="'category' + (category.shown ? ' shown' : '')" v-for="category in categories">
+                <h1 v-on:click.self="toggleViewingCategory(category)">{{ category.name }}</h1>
+                <div class="graph-preview-container" v-if="category.shown">
+                    <div v-for="graph in category.graphs">
+                        <a class="graph-preview" v-bind:href="'/graphs/' + category.name + '/' + graph.name" v-on:click.prevent="viewGraph(category, graph)">
+                            <h1>{{ graph.name }}</h1>
+                            <div class="y-label">{{ graph.y }}</div>
+                            <div class="y-labelled-points">
+                                <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
+                                <div class="labelled-point labelled-point-max-y">{{ getMaxY(graph.data) }}</div>
+                            </div>
+                            <svg class="graph-preview-graph">
+                                <path v-bind:d="drawPath(graph.data)" />
+                            </svg>
+                            <div class="x-labelled-points">
+                                <div class="labelled-point labelled-point-min-x">{{ getMinX(graph.data) }}</div>
+                                <div class="labelled-point labelled-point-max-x">{{ getMaxX(graph.data) }}</div>
+                            </div>
+                            <div class="x-label">{{ graph.x }}</div>
+                        </a>
+                    </div>
+                    <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
+                </div>
+            </section>
+        </main>
+        <script>
+            testData.categories.forEach((category) => category.shown = true);
+
+            Vue.component("graph-preview-add-new", {
+                props: [ "category" ],
+                template: `
+                    <div>
+                        <a class="graph-preview graph-preview-add-new" v-bind:href="'/new-graph/' + category.name" v-on:click.prevent="startAddingGraph" v-if="!adding">
+                            <div>
+                                Add a new {{ category.name }} graph
+                            </div>
+                        </a>
+                        <div class="graph-preview graph-preview-adding" v-if="adding">
+                            <h1><input type="text" v-model="name" placeholder="breath-holding record"></h1>
+                            <p>
+                                <label>
+                                    Y-axis label:
+                                    <input type="text" v-model="yLabel" placeholder="seconds">
+                                </label>
+                                <label>
+                                    X-axis label:
+                                    <input type="text" v-model="xLabel" placeholder="date">
+                                </label>
+                                <button v-on:click.prevent="finishAddingGraph">Add graph</button>
+                            </p>
+                        </div>
+                    </div>
+                `,
+                methods: {
+                    startAddingGraph: function() {
+                        this.adding = true;
+                        //TODO
+                        //- show adding graph view instead of "add graph" field
+                        //  - discard
+                        //  - fill out and submit
+                        //- create graph in data
+                    },
+                    finishAddingGraph: function() {
+                        this.category.graphs.push({
+                            name: this.name,
+                            x: this.xLabel,
+                            y: this.yLabel,
+                            data: []
+                        });
+                        this.name = "";
+                        this.xLabel = "date";
+                        this.yLabel = "";
+                        this.adding = false;
+                    }
+                },
+                data: function() {
+                    return {
+                        adding: false,
+                        name: "",
+                        xLabel: "date",
+                        yLabel: ""
+                    };
+                }
+            });
+
+            let app = new Vue({
+                el: "main",
+                data: testData,
+                methods: {
+                    drawPath: function(data) {
+                        let yValues = data.map((datum) => datum.y);
+                        let min = Math.min.apply(null, yValues);
+                        let max = Math.max.apply(null, yValues);
+
+                        console.log("minmax", min, max);
+
+                        //If min is less than 50% of max, show full graph:
+                        if(min < 0.5 * max) {
+                            min = 0;
+                        }
+
+                        //Find ratio
+                        let pixelHeight = 150;
+                        let pixelRatio = pixelHeight / (max - min);
+
+                        console.log("pixelRatio", pixelRatio);
+
+                        //TODO: better y spread based on date
+                        let coords = data.map((datum, i) => `${(i / (data.length - 1)) * 350} ${pixelHeight - ((datum.y - min) * pixelRatio)}`);
+                        return "M" + coords.join(" L");
+                    },
+                    getMinY: function(data) {
+                        if(data.length == 0) return 0;
+
+                        let yValues = data.map((datum) => datum.y);
+                        let min = Math.min.apply(null, yValues);
+                        let max = Math.max.apply(null, yValues);
+
+                        //If min is less than 50% of max, show full graph:
+                        if(min < 0.5 * max) {
+                            min = 0;
+                        }
+
+                        return min;
+                    },
+                    getMaxY: function(data) {
+                        if(data.length == 0) return 0;
+
+                        let yValues = data.map((datum) => datum.y);
+                        return Math.max.apply(null, yValues);
+                    },
+                    getMinX: function(data) {
+                        if(data.length == 0) return 0;
+
+                        return data[0].x;
+                    },
+                    getMaxX: function(data) {
+                        if(data.length == 0) return 0;
+
+                        return data[data.length - 1].x;
+                    },
+                    viewGraph: function(category, graph) {
+                        //TODO
+                        //- first version could be overlay, shows entire graph
+                        console.log(`trigger viewing graph /${category.name}/${graph.name}`);
+                    },
+                    toggleViewingCategory: function(category) {
+                        console.log("hello");
+                        category.shown = !category.shown;
+                    }
+                }
+            });
+        </script>
+        <!-- the big todo
+            1. viewing graphs
+            3. adding data points to graphs
+            4. adding categories
+            5. deleting categories
+            6. deleting graphs
+            7. save to local storage on change
+            ## good enough to release v0.1.0 ##
+            ## each following step can be a release on its own ##
+            8. extract components (eg. v0.1.1)
+            9. make into a pwa (eg. v0.1.2)
+           10. support comparisons of graphs (multiple in a single view) (eg. v0.2.0)
+           11. simple backend with user to allow sharing across devices (eg. v1.0.0)
+           12. share graphs with other users for viewing (they can compare with yours or simply view) (eg. 1.1.0)
+           13. share graphs with other users for editing (they can contribute data points) (eg. 1.2.0)
+           14. support formulas going between values (eg. from kWh to DKK) (eg. 1.3.0)
+           15. share graphs with simply a public link (rights manageable, revokable, etc.; users can add it to their acc) (eg. 1.4.0)
+           16. dashboard: highlight certain graphs on your dashboard (eg. 1.5.0)
+           17. make downloadable in app stores
+           18. add an easily usable API to allow integrations (eg. 1.6.0)
+           19. add support for services such as IFTTT or others, automatically logging data (eg. 1.7.0)
+           20. add support for gathering data from other APIs, setting timers for how often it should happen - can we support eg. facebook's api with oauth? (eg. 1.8.0)
+           21. support reminders (emails/notifications) at intervals: "remember to log data into your graph X" (eg. 1.9.0)
+        -->
+    </body>
+</html>
