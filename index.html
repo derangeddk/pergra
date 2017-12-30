@@ -234,6 +234,14 @@
                 font-weight: inherit;
                 border-bottom: 1px dashed black;
             }
+            .remove-category-button:after {
+                content: '❌';
+            }
+            .remove-category-button {
+                float: right;
+                color: inherit;
+                text-decoration: inherit;
+            }
         </style>
         <script>
             let testData = {
@@ -287,7 +295,10 @@
         </header>
         <main>
             <section v-bind:class="'category' + (category.shown ? ' shown' : '')" v-for="category in categories">
-                <h1 v-on:click.self="toggleViewingCategory(category)">{{ category.name }}</h1>
+                <h1 v-on:click.self="toggleViewingCategory(category)">
+                    <a href="#" v-on:click.prevent="removeCategory(category)" class="remove-category-button"></a>
+                    {{ category.name }}
+                </h1>
                 <div class="graph-preview-container" v-if="category.shown">
                     <graph-preview v-for="graph in category.graphs" v-bind:graph="graph" v-bind:category="category" v-bind:key="graph.name"></graph-preview>
                     <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
@@ -521,15 +532,18 @@
                 data: testData,
                 methods: {
                     toggleViewingCategory: function(category) {
-                        console.log("hello");
                         category.shown = !category.shown;
+                    },
+                    removeCategory: function(category) {
+                        if(confirm(`Removing the category will also remove all graphs in the category. For good. Are you sure you want to remove the ${category.name}-category?`) == true) {
+                            this.categories = this.categories.filter(c2 => c2 != category);
+                        }
                     }
                 }
             });
         </script>
         <!-- the big todo
             4. adding categories
-            5. deleting categories
             6. deleting graphs
             7. save to local storage on change
             7b. responsive/mobile friendly
