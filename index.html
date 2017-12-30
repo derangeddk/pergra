@@ -162,6 +162,78 @@
             .graph-preview-adding label {
                 display: block;
             }
+            .graph-view-overlay {
+                background: white;
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                z-index: 5;
+                max-width: 100%;
+                width: 450px;
+                box-sizing: border-box;
+                padding: 10px;
+                left: calc(50% - 400px);
+                overflow: scroll-y;
+            }
+            .graph-view-overlay .close-overlay {
+                float: right;
+                color: rgba(0,0,0,0.5);
+                font-size: 0.9em;
+                text-decoration: none;
+            }
+            .graph-view-overlay .close-overlay:after {
+                content: '❌';
+            }
+            .graph-view-overlay-header {
+                border-bottom: 1px solid rgba(0,0,0,0.2);
+            }
+            .graph-view-overlay-header h1 {
+                margin: 0;
+            }
+            .graph-view-overlay-header input {
+                font-size: inherit;
+                font-weight: inherit;
+                border: none;
+                background: transparent;
+                font-family: inherit;
+            }
+            .graph-view-overlay-fading {
+                background: rgba(0,0,0,0.6);
+                position: fixed;
+                top: -10px;
+                left: -10px;
+                right: -10px;
+                bottom: -10px;
+                z-index: 2;
+            }
+            .data-points-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .data-points-table td, .data-points-table th {
+                border-left: 1px solid rgba(0,0,0,0.1);
+                border-right: 1px solid rgba(0,0,0,0.1);
+                padding: 5px;
+            }
+            .data-points-table th {
+                background: rgba(0,0,0,0.2);
+            }
+            .data-points-table td {
+                text-align: center;
+            }
+            .data-points-table tbody tr:nth-child(2n) {
+                background: rgba(0,0,0,0.1);
+            }
+            .data-points-table input {
+                color: inherit;
+                font-family: inherit;
+                border: none;
+                background: transparent;
+                text-align: inherit;
+                width: 100px;
+                font-weight: inherit;
+                border-bottom: 1px dashed black;
+            }
         </style>
         <script>
             let testData = {
@@ -217,7 +289,18 @@
             <section v-bind:class="'category' + (category.shown ? ' shown' : '')" v-for="category in categories">
                 <h1 v-on:click.self="toggleViewingCategory(category)">{{ category.name }}</h1>
                 <div class="graph-preview-container" v-if="category.shown">
-                    <div v-for="graph in category.graphs">
+                    <graph-preview v-for="graph in category.graphs" v-bind:graph="graph" v-bind:category="category" v-bind:key="graph.name"></graph-preview>
+                    <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
+                </div>
+            </section>
+        </main>
+        <script>
+            testData.categories.forEach((category) => category.shown = true);
+
+            Vue.component("graph-preview", {
+                props: [ "category", "graph" ],
+                template: `
+                    <div>
                         <a class="graph-preview" v-bind:href="'/graphs/' + category.name + '/' + graph.name" v-on:click.prevent="viewGraph(category, graph)">
                             <h1>{{ graph.name }}</h1>
                             <div class="y-label">{{ graph.y }}</div>
@@ -234,13 +317,145 @@
                             </div>
                             <div class="x-label">{{ graph.x }}</div>
                         </a>
+                        <div class="graph-view-overlay" v-if="viewing">
+                            <section class="graph-view-overlay-header">
+                                <a class="close-overlay" href="#" v-on:click.prevent="stopViewing"></a>
+                                <h1><input v-model="editingName"></h1>
+                            </section>
+                            <section>
+                                <h3>Data points</h3>
+                                <table class="data-points-table">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                x-axis<br>
+                                                <input type="text" v-model="editingXLabel">
+                                            </th>
+                                            <th>
+                                                y-axis<br>
+                                                <input type="text" v-model="editingYLabel">
+                                            </th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="datum in editingData">
+                                            <td><input type="text" v-model="datum.x"></td>
+                                            <td><input type="text" v-model="datum.y"></td>
+                                            <td><a href="#" v-on:click.prevent="removeDatum(datum)">Remove</a></td>
+                                        </tr>
+                                        <tr>
+                                            <td><input type="text" v-model="nextDatumX"></td>
+                                            <td><input type="text" v-model="nextDatumY"></td>
+                                            <td><a href="#" v-on:click.prevent="addDatum">Add</a></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </section>
+
+                            <button v-on:click="saveAndStopViewing">Save</button>
+                        </div>
+                        <div class="graph-view-overlay-fading" v-if="viewing" v-on:click="stopViewing"></div>
                     </div>
-                    <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
-                </div>
-            </section>
-        </main>
-        <script>
-            testData.categories.forEach((category) => category.shown = true);
+                `,
+                data: function() {
+                    return {
+                        viewing: false,
+                        editingName: "",
+                        editingYLabel: "",
+                        editingXLabel: "",
+                        editingData: [],
+                        nextDatumX: "",
+                        nextDatumY: ""
+                    };
+                },
+                methods: {
+                    drawPath: function(data) {
+                        let yValues = data.map((datum) => datum.y);
+                        let min = Math.min.apply(null, yValues);
+                        let max = Math.max.apply(null, yValues);
+
+                        //If min is less than 50% of max, show full graph:
+                        if(min < 0.5 * max) {
+                            min = 0;
+                        }
+
+                        //Find ratio
+                        let pixelHeight = 150;
+                        let pixelRatio = pixelHeight / (max - min);
+
+                        //TODO: better y spread based on date
+                        let coords = data.map((datum, i) => `${(i / (data.length - 1)) * 350} ${pixelHeight - ((datum.y - min) * pixelRatio)}`);
+                        return "M" + coords.join(" L");
+                    },
+                    getMinY: function(data) {
+                        if(data.length == 0) return 0;
+
+                        let yValues = data.map((datum) => datum.y);
+                        let min = Math.min.apply(null, yValues);
+                        let max = Math.max.apply(null, yValues);
+
+                        //If min is less than 50% of max, show full graph:
+                        if(min < 0.5 * max) {
+                            min = 0;
+                        }
+
+                        return min;
+                    },
+                    getMaxY: function(data) {
+                        if(data.length == 0) return 0;
+
+                        let yValues = data.map((datum) => datum.y);
+                        return Math.max.apply(null, yValues);
+                    },
+                    getMinX: function(data) {
+                        if(data.length == 0) return 0;
+
+                        return data[0].x;
+                    },
+                    getMaxX: function(data) {
+                        if(data.length == 0) return 0;
+
+                        return data[data.length - 1].x;
+                    },
+                    viewGraph: function() {
+                        this.editingName = this.graph.name;
+                        this.editingXLabel = this.graph.x;
+                        this.editingYLabel = this.graph.y;
+                        this.editingData = this.graph.data.map((datum) => Object.assign({}, datum));
+                        this.viewing = true;
+                    },
+                    stopViewing: function() {
+                        console.log("trigger stop viewing");
+                        this.viewing = false;
+                    },
+                    saveAndStopViewing: function() {
+                        if(this.nextDatumX.length && this.nextDatumY.length) {
+                            this.addDatum();
+                        }
+                        this.graph.name = this.editingName;
+                        this.graph.x = this.editingXLabel;
+                        this.graph.y = this.editingYLabel;
+                        this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
+                        this.viewing = false;
+                    },
+                    addDatum: function() {
+                        if(!this.nextDatumX.length || !this.nextDatumY.length) {
+                            return;
+                        }
+
+                        this.editingData.push({
+                            x: this.nextDatumX,
+                            y: this.nextDatumY
+                        });
+                        this.nextDatumX = "";
+                        this.nextDatumY = "";
+                    },
+                    removeDatum: function(datum) {
+                        this.editingData = this.editingData.filter((d2) => d2 !== datum);
+                    }
+                }
+            });
 
             Vue.component("graph-preview-add-new", {
                 props: [ "category" ],
@@ -305,63 +520,6 @@
                 el: "main",
                 data: testData,
                 methods: {
-                    drawPath: function(data) {
-                        let yValues = data.map((datum) => datum.y);
-                        let min = Math.min.apply(null, yValues);
-                        let max = Math.max.apply(null, yValues);
-
-                        console.log("minmax", min, max);
-
-                        //If min is less than 50% of max, show full graph:
-                        if(min < 0.5 * max) {
-                            min = 0;
-                        }
-
-                        //Find ratio
-                        let pixelHeight = 150;
-                        let pixelRatio = pixelHeight / (max - min);
-
-                        console.log("pixelRatio", pixelRatio);
-
-                        //TODO: better y spread based on date
-                        let coords = data.map((datum, i) => `${(i / (data.length - 1)) * 350} ${pixelHeight - ((datum.y - min) * pixelRatio)}`);
-                        return "M" + coords.join(" L");
-                    },
-                    getMinY: function(data) {
-                        if(data.length == 0) return 0;
-
-                        let yValues = data.map((datum) => datum.y);
-                        let min = Math.min.apply(null, yValues);
-                        let max = Math.max.apply(null, yValues);
-
-                        //If min is less than 50% of max, show full graph:
-                        if(min < 0.5 * max) {
-                            min = 0;
-                        }
-
-                        return min;
-                    },
-                    getMaxY: function(data) {
-                        if(data.length == 0) return 0;
-
-                        let yValues = data.map((datum) => datum.y);
-                        return Math.max.apply(null, yValues);
-                    },
-                    getMinX: function(data) {
-                        if(data.length == 0) return 0;
-
-                        return data[0].x;
-                    },
-                    getMaxX: function(data) {
-                        if(data.length == 0) return 0;
-
-                        return data[data.length - 1].x;
-                    },
-                    viewGraph: function(category, graph) {
-                        //TODO
-                        //- first version could be overlay, shows entire graph
-                        console.log(`trigger viewing graph /${category.name}/${graph.name}`);
-                    },
                     toggleViewingCategory: function(category) {
                         console.log("hello");
                         category.shown = !category.shown;
@@ -370,8 +528,6 @@
             });
         </script>
         <!-- the big todo
-            1. viewing graphs
-            3. adding data points to graphs
             4. adding categories
             5. deleting categories
             6. deleting graphs
@@ -380,7 +536,9 @@
             ## each following step can be a release on its own ##
             8. extract components (eg. v0.1.1)
             9. make into a pwa (eg. v0.1.2)
+            9b. all the small fixes in todos (eg. v0.1.3)
            10. support comparisons of graphs (multiple in a single view) (eg. v0.2.0)
+           10b. better spread of dates and integers (spread should correspond to distance) (eg. v0.2.1)
            11. simple backend with user to allow sharing across devices (eg. v1.0.0)
            12. share graphs with other users for viewing (they can compare with yours or simply view) (eg. 1.1.0)
            13. share graphs with other users for editing (they can contribute data points) (eg. 1.2.0)
