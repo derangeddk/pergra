@@ -57,13 +57,16 @@
             }
             .graph-preview-container {
                 display: flex;
-                flex-shrink: 0;
-                flex-basis: 500px;
-                flex-grow: 1;
+                flex-shrink: 1;
+                flex-basis: 450px;
+                flex-grow: 0;
+                flex-wrap: wrap;
                 margin: 0 5px 5px;
             }
             .graph-preview-container > div {
-                width: 500px;
+                width: 425px;
+                max-width: calc(100% - 10px);
+                box-sizing: border-box;
                 height: 253px;
                 margin: 5px;
             }
@@ -76,6 +79,7 @@
                 box-sizing: border-box;
                 height: 100%;
                 color: black;
+                overflow: hidden;
             }
             .graph-preview > h1 {
                 background: rgb(41, 128, 185); /* TODO: same with the colors here: have them depend on name? */
@@ -130,7 +134,7 @@
             }
             .graph-preview .x-labelled-points {
                 margin-left: calc(30px + 18px + 15px);
-                width: 350px;
+                width: calc(100% - 30px - 18px - 15px - 8px);
                 position: relative;
                 height: 1em;
             }
@@ -147,7 +151,9 @@
                 border-left: 2px dashed #5CB5F9;
                 border-bottom: 2px dashed #5CB5F9;
                 height: 155px;
-                width: 350px;
+                max-width: 350px;
+                width: calc(100% - 70px);
+                box-sizing: border-box;
                 vertical-align: middle;
             }
             .graph-preview-graph path {
@@ -324,7 +330,7 @@
                                 <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
                                 <div class="labelled-point labelled-point-max-y">{{ getMaxY(graph.data) }}</div>
                             </div>
-                            <svg class="graph-preview-graph">
+                            <svg class="graph-preview-graph" viewBox="0 0 350 155">
                                 <path v-bind:d="drawPath(graph.data)" />
                             </svg>
                             <div class="x-labelled-points">
