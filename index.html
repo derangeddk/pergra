@@ -242,6 +242,14 @@
                 color: inherit;
                 text-decoration: inherit;
             }
+            .remove-graph-button:after {
+                content: '❌';
+            }
+            .remove-graph-button {
+                float: right;
+                color: inherit;
+                text-decoration: inherit;
+            }
         </style>
         <script>
             let testData = {
@@ -313,7 +321,10 @@
                 template: `
                     <div>
                         <a class="graph-preview" v-bind:href="'/graphs/' + category.name + '/' + graph.name" v-on:click.prevent="viewGraph(category, graph)">
-                            <h1>{{ graph.name }}</h1>
+                            <h1>
+                                <a href="#" v-on:click.prevent="removeGraph" class="remove-graph-button"></a>
+                                {{ graph.name }}
+                            </h1>
                             <div class="y-label">{{ graph.y }}</div>
                             <div class="y-labelled-points">
                                 <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
@@ -450,6 +461,11 @@
                         this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
                         this.viewing = false;
                     },
+                    removeGraph: function() {
+                        if(confirm(`Removing the graph will lose all the data in it for good. Are you sure you want to remove your graph, ${this.graph.name}?`)) {
+                            this.category.graphs = this.category.graphs.filter(g2 => g2 != this.graph);
+                        }
+                    },
                     addDatum: function() {
                         if(!this.nextDatumX.length || !this.nextDatumY.length) {
                             return;
@@ -544,7 +560,6 @@
         </script>
         <!-- the big todo
             4. adding categories
-            6. deleting graphs
             7. save to local storage on change
             7b. responsive/mobile friendly
             ## good enough to release v0.1.0 ##
