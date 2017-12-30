@@ -263,6 +263,7 @@
                                     <input type="text" v-model="xLabel" placeholder="date">
                                 </label>
                                 <button v-on:click.prevent="finishAddingGraph">Add graph</button>
+                                <button v-on:click.prevent="regretAddingGraph">Discard</button>
                             </p>
                         </div>
                     </div>
@@ -270,11 +271,12 @@
                 methods: {
                     startAddingGraph: function() {
                         this.adding = true;
-                        //TODO
-                        //- show adding graph view instead of "add graph" field
-                        //  - discard
-                        //  - fill out and submit
-                        //- create graph in data
+                    },
+                    regretAddingGraph: function() {
+                        this.name = "";
+                        this.xLabel = "date";
+                        this.yLabel = "";
+                        this.adding = false;
                     },
                     finishAddingGraph: function() {
                         this.category.graphs.push({
