@@ -2,6 +2,7 @@
 <html>
     <head>
         <meta charset="utf8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>pergra: Personal Graphs</title>
         <style type="text/css">
             body {
@@ -128,7 +129,7 @@
             }
             .graph-preview .x-label {
                 text-align: center;
-                width: 350px;
+                width: calc(100% - 30px - 18px - 15px);
                 margin-left: calc(30px + 18px + 15px);
                 margin-bottom: 10px;
             }
@@ -595,7 +596,6 @@
             });
         </script>
         <!-- the big todo
-            7b. responsive/mobile friendly
             ## good enough to release v0.1.0 ##
             ## each following step can be a release on its own ##
             8. extract components (eg. v0.1.1)
