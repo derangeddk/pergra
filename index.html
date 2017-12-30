@@ -186,6 +186,7 @@
                 display: block;
             }
             .graph-view-overlay {
+                color: black;
                 background: white;
                 position: fixed;
                 top: 0;
@@ -274,50 +275,6 @@
                 text-decoration: inherit;
             }
         </style>
-        <script>
-            let testData = {
-               categories: [
-                    {
-                        name: "fitness",
-                        graphs: [
-                            {
-                                name: "deadlift",
-                                x: "date",
-                                y: "kg",
-                                data: [
-                                    { x: "2017-09-01", y: 70 },
-                                    { x: "2017-11-31", y: 135 }
-                                ]
-                            },
-                            {
-                                name: "back squat",
-                                x: "date",
-                                y: "kg",
-                                data: [
-                                    { x: "2017-09-01", y: 60 },
-                                    { x: "2017-11-31", y: 125 }
-                                ]
-                            }
-                        ]
-                   },
-                   {
-                        name: "house",
-                        graphs: [
-                            {
-                                name: "electricity use",
-                                x: "date",
-                                y: "kWh",
-                                data: [
-                                    { x: "2017-10-30", y: 2120 },
-                                    { x: "2017-11-30", y: 3221 },
-                                    { x: "2017-12-30", y: 3421 }
-                                ]
-                            }
-                        ]
-                   }
-                ]
-            };
-        </script>
         <script src="https://cdn.jsdelivr.net/npm/vue"></script>
     </head>
     <body>
@@ -331,8 +288,8 @@
                     {{ category.name }}
                 </h1>
                 <div class="graph-preview-container" v-if="category.shown">
-                    <graph-preview v-for="graph in category.graphs" v-bind:graph="graph" v-bind:category="category" v-bind:key="graph.name"></graph-preview>
-                    <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
+                    <graph-preview v-for="graph in category.graphs" v-bind:graph="graph" v-bind:category="category" v-bind:key="graph.name" v-on:datachange="handleDataChange"></graph-preview>
+                    <graph-preview-add-new v-bind:category="category" v-on:datachange="handleDataChange"></graph-preview-add-new>
                 </div>
             </section>
             <section class="category category-add-new">
@@ -341,9 +298,17 @@
             </section>
         </main>
         <script>
-            testData.categories.forEach((category) => category.shown = true);
-            testData.addingCategory = false;
-            testData.addingCategoryName = "";
+            let data = localStorage.getItem("pergra_data");
+            if(data) {
+                data = JSON.parse(data);
+            }
+            else {
+                data = { categories: [] };
+            }
+
+            data.categories.forEach((category) => category.shown = true);
+            data.addingCategory = false;
+            data.addingCategoryName = "";
 
             Vue.component("graph-preview", {
                 props: [ "category", "graph" ],
@@ -477,7 +442,6 @@
                         this.viewing = true;
                     },
                     stopViewing: function() {
-                        console.log("trigger stop viewing");
                         this.viewing = false;
                     },
                     saveAndStopViewing: function() {
@@ -489,10 +453,12 @@
                         this.graph.y = this.editingYLabel;
                         this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
                         this.viewing = false;
+                        this.$emit("datachange");
                     },
                     removeGraph: function() {
                         if(confirm(`Removing the graph will lose all the data in it for good. Are you sure you want to remove your graph, ${this.graph.name}?`)) {
                             this.category.graphs = this.category.graphs.filter(g2 => g2 != this.graph);
+                            this.$emit("datachange");
                         }
                     },
                     addDatum: function() {
@@ -560,6 +526,7 @@
                         this.xLabel = "date";
                         this.yLabel = "";
                         this.adding = false;
+                        this.$emit("datachange");
                     }
                 },
                 data: function() {
@@ -574,7 +541,7 @@
 
             let app = new Vue({
                 el: "main",
-                data: testData,
+                data: data,
                 methods: {
                     toggleViewingCategory: function(category) {
                         category.shown = !category.shown;
@@ -582,6 +549,7 @@
                     removeCategory: function(category) {
                         if(confirm(`Removing the category will also remove all graphs in the category. For good. Are you sure you want to remove the ${category.name}-category?`) == true) {
                             this.categories = this.categories.filter(c2 => c2 != category);
+                            this.handleDataChange();
                         }
                     },
                     addNewCategory: function() {
@@ -596,20 +564,43 @@
                         });
                         this.addingCategoryName = "";
                         this.addingCategory = false;
+                        this.handleDataChange();
+                    },
+                    handleDataChange: function() {
+                        localStorage.setItem("pergra_data", JSON.stringify({
+                            categories: this.categories.map((category) => {
+                                return {
+                                    name: category.name,
+                                    graphs: category.graphs.map((graph) => {
+                                        return {
+                                            name: graph.name,
+                                            x: graph.x,
+                                            y: graph.y,
+                                            data: graph.data.map((datum) => {
+                                                return { x: datum.x, y: datum.y };
+                                            })
+                                        };
+                                    })
+                                }
+                            })
+                        }));
                     }
                 }
             });
         </script>
         <!-- the big todo
-            7. save to local storage on change
             7b. responsive/mobile friendly
             ## good enough to release v0.1.0 ##
             ## each following step can be a release on its own ##
             8. extract components (eg. v0.1.1)
             9. make into a pwa (eg. v0.1.2)
             9b. all the small fixes in todos (eg. v0.1.3)
+            9c. moving data points up and down when viewing a graph (reorganizing) (eg. v0.1.4)
            10. support comparisons of graphs (multiple in a single view) (eg. v0.2.0)
            10b. better spread of dates and integers (spread should correspond to distance) (eg. v0.2.1)
+           10c. support one-click sorting of data points (sort alphanumerically by x-axis) (eg. v0.2.2)
+           10d. little animations for things to make them look nice (eg. v0.2.3)
+           10e. optimize ux (eg. v0.3.0)
            11. simple backend with user to allow sharing across devices (eg. v1.0.0)
            12. share graphs with other users for viewing (they can compare with yours or simply view) (eg. 1.1.0)
            13. share graphs with other users for editing (they can contribute data points) (eg. 1.2.0)
