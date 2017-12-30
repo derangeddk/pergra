@@ -22,16 +22,38 @@
                 border: 1px solid rgb(231, 76, 60);
                 background: rgb(231, 76, 60); /* TODO: would be cool if colors were based on the name, different by category; of course allowing assignment */
                 margin: 15px;
+                color: white;
             }
             .category > h1 {
                 margin: 0;
                 padding: 12px;
-                color: white;
+                color: inherit;
                 font-size: 1em;
                 cursor: pointer;
             }
             .category.shown > h1 {
                 padding-bottom: 0;
+            }
+            .category-add-new {
+                background: white;
+                border: 6px dashed rgb(231, 76, 60);
+                color: rgb(231, 76, 60);
+            }
+            .category-add-new h1 input {
+                border: none;
+                background: transparent;
+                border-bottom: 1px dashed rgb(231, 76, 60);
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                font-weight: inherit;
+            }
+            .category-add-new .done-adding-category-button {
+                color: rgb(231, 76, 60);;
+                text-decoration: inherit;
+            }
+            .category-add-new .done-adding-category-button:after {
+                content: '✓';
             }
             .graph-preview-container {
                 display: flex;
@@ -53,6 +75,7 @@
                 display: block;
                 box-sizing: border-box;
                 height: 100%;
+                color: black;
             }
             .graph-preview > h1 {
                 background: rgb(41, 128, 185); /* TODO: same with the colors here: have them depend on name? */
@@ -312,9 +335,15 @@
                     <graph-preview-add-new v-bind:category="category"></graph-preview-add-new>
                 </div>
             </section>
+            <section class="category category-add-new">
+                <h1 v-if="!addingCategory" v-on:click="addNewCategory">Add new category</h1>
+                <h1 v-if="addingCategory"><input type="text" v-model="addingCategoryName"><a href="#" class="done-adding-category-button" v-on:click="finishAddingNewCategory"></a></h1>
+            </section>
         </main>
         <script>
             testData.categories.forEach((category) => category.shown = true);
+            testData.addingCategory = false;
+            testData.addingCategoryName = "";
 
             Vue.component("graph-preview", {
                 props: [ "category", "graph" ],
@@ -554,12 +583,24 @@
                         if(confirm(`Removing the category will also remove all graphs in the category. For good. Are you sure you want to remove the ${category.name}-category?`) == true) {
                             this.categories = this.categories.filter(c2 => c2 != category);
                         }
+                    },
+                    addNewCategory: function() {
+                        this.addingCategoryName = "";
+                        this.addingCategory = true;
+                    },
+                    finishAddingNewCategory: function() {
+                        this.categories.push({
+                            name: this.addingCategoryName,
+                            graphs: [],
+                            shown: true
+                        });
+                        this.addingCategoryName = "";
+                        this.addingCategory = false;
                     }
                 }
             });
         </script>
         <!-- the big todo
-            4. adding categories
             7. save to local storage on change
             7b. responsive/mobile friendly
             ## good enough to release v0.1.0 ##
