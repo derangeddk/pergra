@@ -323,6 +323,27 @@
             let data = localStorage.getItem("pergra_data");
             if(data) {
                 data = JSON.parse(data);
+
+                // enhancing data: if a field was blank, set it to a string
+                data.categories = data.categories.map((category) => {
+                    if(category.name == "") {
+                        category.name = "(untitled)";
+                    }
+
+                    category.graphs = category.graphs.map((graph) => {
+                        if(graph.name == "") {
+                            graph.name = "(untitled)";
+                        }
+                        if(graph.x == "") {
+                            graph.x = "(blank)";
+                        }
+                        if(graph.y == "") {
+                            graph.y = "(blank)";
+                        }
+                    });
+
+                    return category;
+                })
             }
             else {
                 data = { categories: [] };
@@ -467,14 +488,25 @@
                         this.viewing = false;
                     },
                     saveAndStopViewing: function() {
-                        if(this.nextDatumX.length && this.nextDatumY.length) {
-                            this.addDatum();
+                        if(this.editingXLabel == "") {
+                            this.editingXLabel = "(blank)";
                         }
+                        if(this.editingYLabel == "") {
+                            this.editingYLabel = "(blank)";
+                        }
+                        if(this.editingName == "") {
+                            this.editingName = "(untitled)";
+                        }
+
+                        this.addDatum();
+
                         this.graph.name = this.editingName;
                         this.graph.x = this.editingXLabel;
                         this.graph.y = this.editingYLabel;
                         this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
+
                         this.viewing = false;
+
                         this.$emit("datachange");
                     },
                     removeGraph: function() {
@@ -529,6 +561,10 @@
                 `,
                 methods: {
                     startAddingGraph: function() {
+                        this.name = "";
+                        this.xLabel = "date";
+                        this.yLabel = "";
+
                         this.adding = true;
                     },
                     regretAddingGraph: function() {
@@ -538,16 +574,25 @@
                         this.adding = false;
                     },
                     finishAddingGraph: function() {
+                        if(this.xLabel == "") {
+                            this.xLabel = "(blank)";
+                        }
+                        if(this.yLabel == "") {
+                            this.yLabel = "(blank)";
+                        }
+                        if(this.name == "") {
+                            this.name = "(untitled)";
+                        }
+
                         this.category.graphs.push({
                             name: this.name,
                             x: this.xLabel,
                             y: this.yLabel,
                             data: []
                         });
-                        this.name = "";
-                        this.xLabel = "date";
-                        this.yLabel = "";
+
                         this.adding = false;
+
                         this.$emit("datachange");
                     }
                 },
@@ -579,13 +624,19 @@
                         this.addingCategory = true;
                     },
                     finishAddingNewCategory: function() {
+                        if(this.addingCategoryName == "") {
+                            this.addingCategoryName = "(untitled)";
+                        }
+
                         this.categories.push({
                             name: this.addingCategoryName,
                             graphs: [],
                             shown: true
                         });
+
                         this.addingCategoryName = "";
                         this.addingCategory = false;
+
                         this.handleDataChange();
                     },
                     handleDataChange: function() {
@@ -622,13 +673,14 @@
         </script>
 
         <!-- the big todo
-            ## good enough to release v0.1.0 ##
-            ## each following step can be a release on its own ##
-            8. extract components (eg. v0.1.1)
-            8b. extract stylesheet (eg. v0.1.2)
-            9. make into a pwa (eg. v0.1.3)
-            9b. all the small fixes in todos (eg. v0.1.4)
-            9c. moving data points up and down when viewing a graph (reorganizing) (eg. v0.1.5)
+            6. Input validation (eg. v0.1.2)
+            7. Welcome message/instruction on use (eg. v0.1.3)
+            8. extract components (eg. v0.1.4)
+            8b. extract stylesheet (eg. v0.1.5)
+            9. make into a pwa (eg. v0.1.6)
+            9b. all the small fixes in todos (eg. v0.1.7)
+            9c. moving data points up and down when viewing a graph (reorganizing) (eg. v0.1.8)
+            9d. graph previews layouted with flexbox instead of inline layout (eg. v0.1.9)
            10. support comparisons of graphs (multiple in a single view) (eg. v0.2.0)
            10b. better spread of dates and integers (spread should correspond to distance) (eg. v0.2.1)
            10c. support one-click sorting of data points (sort alphanumerically by x-axis) (eg. v0.2.2)
