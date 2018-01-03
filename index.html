@@ -498,7 +498,7 @@
                         });
 
                         //Normalize x values
-                        let xMax = Math.max(1, xDiffs.reduce((a,b) => a + b));
+                        let xMax = Math.max(1, xDiffs.reduce((a,b) => a + b, 0));
 
                         let xValuesNormalized = [];
                         xDiffs.forEach((diff, i) => {
