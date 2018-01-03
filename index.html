@@ -280,6 +280,10 @@
                 font-weight: inherit;
                 border-bottom: 1px dashed black;
             }
+            .data-points-table .next-datum-row {
+                border: 2px dashed rgba(92,181,249,1);
+                background: rgba(92,181,249,0.2) !important;
+            }
             .remove-category-button:after {
                 content: '❌';
             }
@@ -404,7 +408,7 @@
                                             <td><input type="text" v-model="datum.y"></td>
                                             <td><a href="#" v-on:click.prevent="removeDatum(datum)">Remove</a></td>
                                         </tr>
-                                        <tr>
+                                        <tr class="next-datum-row">
                                             <td><input type="text" v-model="nextDatumX"></td>
                                             <td><input type="text" v-model="nextDatumY"></td>
                                             <td><a href="#" v-on:click.prevent="addDatum">Add</a></td>
@@ -483,6 +487,9 @@
                         this.editingXLabel = this.graph.x;
                         this.editingYLabel = this.graph.y;
                         this.editingData = this.graph.data.map((datum) => Object.assign({}, datum));
+
+                        this.resetNextDatum();
+
                         this.viewing = true;
                     },
                     stopViewing: function() {
@@ -525,8 +532,40 @@
                             x: this.nextDatumX,
                             y: this.nextDatumY
                         });
+
+                        this.resetNextDatum();
+                    },
+                    resetNextDatum: function() {
+                        let todayDate = (new Date()).toISOString().substring(0, 10);
+                        let lastDatum = this.editingData[this.editingData.length - 1];
+
                         this.nextDatumX = "";
+                        if(this.editingXLabel == "date") {
+                            this.nextDatumX = todayDate;
+                        }
+                        else if(lastDatum) {
+                            let lastX = "" + lastDatum.x;
+                            if(lastX.match(/^\d+$/)) {
+                                this.nextDatumX = parseInt(lastX) + 1;
+                            }
+                            else if(lastX.match(/^\d+\.\d+$/)) {
+                                this.nextDatumX = parseFloat(lastX) + 1;
+                            }
+                        }
+
                         this.nextDatumY = "";
+                        if(this.editingYLabel == "date") {
+                            this.nextDatumY = todayDate;
+                        }
+                        else if(lastDatum) {
+                            let lastY = "" + lastDatum.y;
+                            if(lastY.match(/^\d+$/)) {
+                                this.nextDatumY = "" + (parseInt(lastY) + 1);
+                            }
+                            else if(lastY.match(/^\d+\.\d+$/)) {
+                                this.nextDatumY = "" + (parseFloat(lastY) + 1);
+                            }
+                        }
                     },
                     removeDatum: function(datum) {
                         this.editingData = this.editingData.filter((d2) => d2 !== datum);
