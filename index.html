@@ -448,8 +448,70 @@
                         let pixelHeight = 150;
                         let pixelRatio = pixelHeight / (max - min);
 
-                        //TODO: better y spread based on date
-                        let coords = data.map((datum, i) => `${(i / (data.length - 1)) * 350} ${pixelHeight - ((datum.y - min) * pixelRatio)}`);
+                        //Normalize y values
+                        let yValuesNormalized = yValues.map((y) => pixelHeight - ((y - min) * pixelRatio));
+
+                        //Get numerical diffs for x
+                        let xDiffs = data.map((datum, i) => {
+                            if(i < 1) {
+                                return 0;
+                            }
+
+                            //Find spread based on distance from last element
+                            let x = "" + datum.x;
+                            let lastX = "" + data[i - 1].x;
+
+                            //- if both look like dates, use the difference in days
+                            let lastXDateMatch = lastX.match(/^(\d{4})\-(\d{2})\-(\d{2})$/);
+                            let xDateMatch = x.match(/^(\d{4})\-(\d{2})\-(\d{2})$/);
+                            if(lastXDateMatch && xDateMatch) {
+                                let lastXTimestamp = (new Date(parseInt(lastXDateMatch[1]), parseInt(lastXDateMatch[2]) - 1, parseInt(lastXDateMatch[3]))).getTime();
+                                let xTimestamp = (new Date(parseInt(xDateMatch[1]), parseInt(xDateMatch[2]) - 1, parseInt(xDateMatch[3]))).getTime();
+                                let timestampDiff = xTimestamp - lastXTimestamp;
+                                let dayDiff = timestampDiff / (1000 * 60 * 60 * 24);
+                                return Math.max(1, dayDiff);
+                            }
+
+                            //- if both look numerical, use the numerical difference
+                            let lastXNumerical = undefined;
+                            if(lastX.match(/^\d+$/)) {
+                                lastXNumerical = parseInt(lastX);
+                            }
+                            else if(lastX.match(/^\d+\.\d+$/)) {
+                                lastXNumerical = parseFloat(lastX);
+                            }
+
+                            let xNumerical = undefined;
+                            if(x.match(/^\d+$/)) {
+                                xNumerical = parseInt(x);
+                            }
+                            else if(x.match(/^\d+\.\d+$/)) {
+                                xNumerical = parseFloat(x);
+                            }
+
+                            if(typeof lastXNumerical !== "undefined" && typeof xNumerical !== "undefined") {
+                                return Math.max(1, xNumerical - lastXNumerical);
+                            }
+
+                            //- else 1
+                            return 1;
+                        });
+
+                        //Normalize x values
+                        let xMax = Math.max(1, xDiffs.reduce((a,b) => a + b));
+
+                        let xValuesNormalized = [];
+                        xDiffs.forEach((diff, i) => {
+                            if(i < 1) {
+                                return xValuesNormalized.push((diff / xMax) * 350);
+                            }
+                            let previousVal = xValuesNormalized[i - 1];
+                            let val = previousVal + ((diff / xMax) * 350);
+                            xValuesNormalized.push(val);
+                        });
+
+                        //Get coords
+                        let coords = data.map((datum, i) => `${xValuesNormalized[i]} ${yValuesNormalized[i]}`);
                         return "M" + coords.join(" L");
                     },
                     getMinY: function(data) {
@@ -524,6 +586,9 @@
                         }
                     },
                     addDatum: function() {
+                        this.nextDatumX = "" + this.nextDatumX;
+                        this.nextDatumY = "" + this.nextDatumY;
+
                         if(!this.nextDatumX.length || !this.nextDatumY.length) {
                             return;
                         }
@@ -713,6 +778,7 @@
         </script>
 
         <!-- the big todo
+            5. Handle x and y axes identically (both can be dates/numerical/etc)
             6. Input validation (eg. v0.1.2)
             7. Welcome message/instruction on use (eg. v0.1.3)
             8. extract components (eg. v0.1.4)
