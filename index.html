@@ -411,7 +411,7 @@
                                         <tr class="next-datum-row">
                                             <td><input type="text" v-model="nextDatumX"></td>
                                             <td><input type="text" v-model="nextDatumY"></td>
-                                            <td><a href="#" v-on:click.prevent="addDatum">Add</a></td>
+                                            <td><a href="#" v-on:click.prevent="addDatum">Add</a> | <a href="#" v-on:click.prevent="clearNextDatum">Clear</a></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -599,6 +599,10 @@
                         });
 
                         this.resetNextDatum();
+                    },
+                    clearNextDatum: function() {
+                        this.nextDatumX = "";
+                        this.nextDatumY = "";
                     },
                     resetNextDatum: function() {
                         let todayDate = (new Date()).toISOString().substring(0, 10);
