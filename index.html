@@ -358,30 +358,11 @@
             data.addingCategory = false;
             data.addingCategoryName = "";
 
-            Vue.component("graph-preview", {
-                props: [ "category", "graph" ],
+            Vue.component("graph-view-overlay", {
+                props: [ "graph" ],
                 template: `
-                    <div>
-                        <a class="graph-preview" v-bind:href="'/graphs/' + category.name + '/' + graph.name" v-on:click.prevent="viewGraph(category, graph)">
-                            <h1>
-                                <a href="#" v-on:click.prevent="removeGraph" class="remove-graph-button"></a>
-                                {{ graph.name }}
-                            </h1>
-                            <div class="y-label">{{ graph.y }}</div>
-                            <div class="y-labelled-points">
-                                <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
-                                <div class="labelled-point labelled-point-max-y">{{ getMaxY(graph.data) }}</div>
-                            </div>
-                            <svg class="graph-preview-graph" viewBox="0 0 350 155">
-                                <path v-bind:d="drawPath(graph.data)" />
-                            </svg>
-                            <div class="x-labelled-points">
-                                <div class="labelled-point labelled-point-min-x">{{ getMinX(graph.data) }}</div>
-                                <div class="labelled-point labelled-point-max-x">{{ getMaxX(graph.data) }}</div>
-                            </div>
-                            <div class="x-label">{{ graph.x }}</div>
-                        </a>
-                        <div class="graph-view-overlay" v-if="viewing">
+                    <div v-if="viewing">
+                        <div class="graph-view-overlay">
                             <section class="graph-view-overlay-header">
                                 <a class="close-overlay" href="#" v-on:click.prevent="stopViewing"></a>
                                 <h1><input v-model="editingName"></h1>
@@ -419,20 +400,139 @@
 
                             <button v-on:click="saveAndStopViewing">Save</button>
                         </div>
-                        <div class="graph-view-overlay-fading" v-if="viewing" v-on:click="stopViewing"></div>
+                        <div class="graph-view-overlay-fading" v-on:click="stopViewing"></div>
                     </div>
                 `,
                 data: function() {
                     return {
-                        viewing: false,
                         editingName: "",
                         editingYLabel: "",
                         editingXLabel: "",
                         editingData: [],
                         nextDatumX: "",
-                        nextDatumY: ""
+                        nextDatumY: "",
+                        viewing: false
                     };
                 },
+                methods: {
+                    startViewing: function() {
+                        this.editingName = this.graph.name;
+                        this.editingXLabel = this.graph.x;
+                        this.editingYLabel = this.graph.y;
+                        this.editingData = this.graph.data.map((datum) => Object.assign({}, datum));
+
+                        this.resetNextDatum();
+
+                        this.viewing = true;
+                    },
+                    stopViewing: function() {
+                        this.viewing = false;
+                    },
+                    saveAndStopViewing: function() {
+                        if(this.editingXLabel == "") {
+                            this.editingXLabel = "(blank)";
+                        }
+                        if(this.editingYLabel == "") {
+                            this.editingYLabel = "(blank)";
+                        }
+                        if(this.editingName == "") {
+                            this.editingName = "(untitled)";
+                        }
+
+                        this.addDatum();
+
+                        this.graph.name = this.editingName;
+                        this.graph.x = this.editingXLabel;
+                        this.graph.y = this.editingYLabel;
+                        this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
+
+                        this.$emit("datachange");
+
+                        this.viewing = false;
+                    },
+                    addDatum: function() {
+                        this.nextDatumX = "" + this.nextDatumX;
+                        this.nextDatumY = "" + this.nextDatumY;
+
+                        if(!this.nextDatumX.length || !this.nextDatumY.length) {
+                            return;
+                        }
+
+                        this.editingData.push({
+                            x: this.nextDatumX,
+                            y: this.nextDatumY
+                        });
+
+                        this.resetNextDatum();
+                    },
+                    clearNextDatum: function() {
+                        this.nextDatumX = "";
+                        this.nextDatumY = "";
+                    },
+                    resetNextDatum: function() {
+                        let todayDate = (new Date()).toISOString().substring(0, 10);
+                        let lastDatum = this.editingData[this.editingData.length - 1];
+
+                        this.nextDatumX = "";
+                        if(this.editingXLabel == "date") {
+                            this.nextDatumX = todayDate;
+                        }
+                        else if(lastDatum) {
+                            let lastX = "" + lastDatum.x;
+                            if(lastX.match(/^\d+$/)) {
+                                this.nextDatumX = parseInt(lastX) + 1;
+                            }
+                            else if(lastX.match(/^\d+\.\d+$/)) {
+                                this.nextDatumX = parseFloat(lastX) + 1;
+                            }
+                        }
+
+                        this.nextDatumY = "";
+                        if(this.editingYLabel == "date") {
+                            this.nextDatumY = todayDate;
+                        }
+                        else if(lastDatum) {
+                            let lastY = "" + lastDatum.y;
+                            if(lastY.match(/^\d+$/)) {
+                                this.nextDatumY = "" + (parseInt(lastY) + 1);
+                            }
+                            else if(lastY.match(/^\d+\.\d+$/)) {
+                                this.nextDatumY = "" + (parseFloat(lastY) + 1);
+                            }
+                        }
+                    },
+                    removeDatum: function(datum) {
+                        this.editingData = this.editingData.filter((d2) => d2 !== datum);
+                    }
+                }
+            });
+
+            Vue.component("graph-preview", {
+                props: [ "category", "graph" ],
+                template: `
+                    <div>
+                        <a class="graph-preview" v-bind:href="'/graphs/' + category.name + '/' + graph.name" v-on:click.prevent="viewGraph">
+                            <h1>
+                                <a href="#" v-on:click.prevent="removeGraph" class="remove-graph-button"></a>
+                                {{ graph.name }}
+                            </h1>
+                            <div class="y-label">{{ graph.y }}</div>
+                            <div class="y-labelled-points">
+                                <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
+                                <div class="labelled-point labelled-point-max-y">{{ getMaxY(graph.data) }}</div>
+                            </div>
+                            <svg class="graph-preview-graph" viewBox="0 0 350 155">
+                                <path v-bind:d="drawPath(graph.data)" />
+                            </svg>
+                            <div class="x-labelled-points">
+                                <div class="labelled-point labelled-point-min-x">{{ getMinX(graph.data) }}</div>
+                                <div class="labelled-point labelled-point-max-x">{{ getMaxX(graph.data) }}</div>
+                            </div>
+                            <div class="x-label">{{ graph.x }}</div>
+                        </a>
+                        <graph-view-overlay ref="graphViewOverlay" v-bind:graph="graph"></graph-view-overlay>
+                    </div>
+                `,
                 methods: {
                     drawPath: function(data) {
                         let yValues = data.map((datum) => datum.y);
@@ -545,38 +645,9 @@
                         return data[data.length - 1].x;
                     },
                     viewGraph: function() {
-                        this.editingName = this.graph.name;
-                        this.editingXLabel = this.graph.x;
-                        this.editingYLabel = this.graph.y;
-                        this.editingData = this.graph.data.map((datum) => Object.assign({}, datum));
-
-                        this.resetNextDatum();
-
-                        this.viewing = true;
+                        this.$refs.graphViewOverlay.startViewing();
                     },
-                    stopViewing: function() {
-                        this.viewing = false;
-                    },
-                    saveAndStopViewing: function() {
-                        if(this.editingXLabel == "") {
-                            this.editingXLabel = "(blank)";
-                        }
-                        if(this.editingYLabel == "") {
-                            this.editingYLabel = "(blank)";
-                        }
-                        if(this.editingName == "") {
-                            this.editingName = "(untitled)";
-                        }
-
-                        this.addDatum();
-
-                        this.graph.name = this.editingName;
-                        this.graph.x = this.editingXLabel;
-                        this.graph.y = this.editingYLabel;
-                        this.graph.data = this.editingData.map((datum) => Object.assign({}, datum));
-
-                        this.viewing = false;
-
+                    onDataChange: function() {
                         this.$emit("datachange");
                     },
                     removeGraph: function() {
@@ -584,60 +655,6 @@
                             this.category.graphs = this.category.graphs.filter(g2 => g2 != this.graph);
                             this.$emit("datachange");
                         }
-                    },
-                    addDatum: function() {
-                        this.nextDatumX = "" + this.nextDatumX;
-                        this.nextDatumY = "" + this.nextDatumY;
-
-                        if(!this.nextDatumX.length || !this.nextDatumY.length) {
-                            return;
-                        }
-
-                        this.editingData.push({
-                            x: this.nextDatumX,
-                            y: this.nextDatumY
-                        });
-
-                        this.resetNextDatum();
-                    },
-                    clearNextDatum: function() {
-                        this.nextDatumX = "";
-                        this.nextDatumY = "";
-                    },
-                    resetNextDatum: function() {
-                        let todayDate = (new Date()).toISOString().substring(0, 10);
-                        let lastDatum = this.editingData[this.editingData.length - 1];
-
-                        this.nextDatumX = "";
-                        if(this.editingXLabel == "date") {
-                            this.nextDatumX = todayDate;
-                        }
-                        else if(lastDatum) {
-                            let lastX = "" + lastDatum.x;
-                            if(lastX.match(/^\d+$/)) {
-                                this.nextDatumX = parseInt(lastX) + 1;
-                            }
-                            else if(lastX.match(/^\d+\.\d+$/)) {
-                                this.nextDatumX = parseFloat(lastX) + 1;
-                            }
-                        }
-
-                        this.nextDatumY = "";
-                        if(this.editingYLabel == "date") {
-                            this.nextDatumY = todayDate;
-                        }
-                        else if(lastDatum) {
-                            let lastY = "" + lastDatum.y;
-                            if(lastY.match(/^\d+$/)) {
-                                this.nextDatumY = "" + (parseInt(lastY) + 1);
-                            }
-                            else if(lastY.match(/^\d+\.\d+$/)) {
-                                this.nextDatumY = "" + (parseFloat(lastY) + 1);
-                            }
-                        }
-                    },
-                    removeDatum: function(datum) {
-                        this.editingData = this.editingData.filter((d2) => d2 !== datum);
                     }
                 }
             });
@@ -783,19 +800,21 @@
 
         <!-- the big todo
             5. Handle x and y axes identically (both can be dates/numerical/etc)
+            5b. little button to add more values before we start adding them
+            5c. graph preview: add another x and y axis label as close to middle as possible
             6. Input validation (eg. v0.1.2)
             7. Welcome message/instruction on use (eg. v0.1.3)
             8. extract components (eg. v0.1.4)
             8b. extract stylesheet (eg. v0.1.5)
             9. make into a pwa (eg. v0.1.6)
             9b. all the small fixes in todos (eg. v0.1.7)
-            9c. moving data points up and down when viewing a graph (reorganizing) (eg. v0.1.8)
-            9d. graph previews layouted with flexbox instead of inline layout (eg. v0.1.9)
+            9c. moving (dragging) data points up and down in ordering when viewing a graph (reorganizing) (eg. v0.1.8)
+            9d. support one-click sorting of data points (sort alphanumerically by x-axis) (eg. v0.1.9)
+            9e. graph previews layouted with flexbox instead of inline layout (eg. v0.1.10)
            10. support comparisons of graphs (multiple in a single view) (eg. v0.2.0)
            10b. better spread of dates and integers (spread should correspond to distance) (eg. v0.2.1)
-           10c. support one-click sorting of data points (sort alphanumerically by x-axis) (eg. v0.2.2)
-           10d. little animations for things to make them look nice (eg. v0.2.3)
-           10e. optimize ux (eg. v0.3.0)
+           10c. little animations for things to make them look nice (eg. v0.2.2)
+           10d. optimize ux (eg. v0.3.0)
            11. simple backend with user to allow sharing across devices (eg. v1.0.0)
            12. share graphs with other users for viewing (they can compare with yours or simply view) (eg. 1.1.0)
            13. share graphs with other users for editing (they can contribute data points) (eg. 1.2.0)
