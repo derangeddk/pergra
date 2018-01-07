@@ -521,7 +521,7 @@
                                 <div class="labelled-point labelled-point-min-y">{{ getMinY(graph.data) }}</div>
                                 <div class="labelled-point labelled-point-max-y">{{ getMaxY(graph.data) }}</div>
                             </div>
-                            <svg class="graph-preview-graph" viewBox="0 0 350 155">
+                            <svg class="graph-preview-graph" viewBox="0 0 350 155" preserveAspectRatio="none">
                                 <path v-bind:d="drawPath(graph.data)" />
                             </svg>
                             <div class="x-labelled-points">
@@ -530,7 +530,7 @@
                             </div>
                             <div class="x-label">{{ graph.x }}</div>
                         </a>
-                        <graph-view-overlay ref="graphViewOverlay" v-bind:graph="graph"></graph-view-overlay>
+                        <graph-view-overlay ref="graphViewOverlay" v-bind:graph="graph" v-on:datachange="onDataChange"></graph-view-overlay>
                     </div>
                 `,
                 methods: {
